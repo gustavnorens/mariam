@@ -5,6 +5,7 @@ LDFLAGS =
 SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin
+ABS_DIR = Abs
 
 SRC = $(wildcard $(SRC_DIR)/*.c)
 
@@ -15,7 +16,10 @@ DEPS = src/Value.h src/Env.h src/Interpret.h Abs/Absyn.h Abs/Parser.h Abs/Printe
 
 TARGET = $(BIN_DIR)/interpreter
 
-all: $(TARGET)
+all: generate $(TARGET)
+
+generate:
+	bnfc --c -m -o $(ABS_DIR)/ Grammar.cf && make -C $(ABS_DIR)
 
 $(TARGET): $(OBJ) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) -o $@ $^
@@ -29,4 +33,4 @@ $(OBJ_DIR) $(BIN_DIR):
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR)
 
-.PHONY: all clean
+.PHONY: all generate clean
