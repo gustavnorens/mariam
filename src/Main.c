@@ -20,8 +20,7 @@ int main(int argc, char **argv) {
             exit(1);
         }
     } else {
-        printf("No filename provided!\n");
-        exit(1);
+        input = stdin;
     }
 
     parse_tree = pProgram(input);
