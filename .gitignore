@@ -1,0 +1,10 @@
+#Compilation stuff
+bin/
+obj/
+Abs/
+
+#Editor stuff
+.vscode/
+
+#source code
+*.mi
