@@ -1,0 +1,22 @@
+data List = Nil | Cons Int List
+
+nestedCapture :: Int -> Int -- works as expected
+nestedCapture x = (\y: Int -> (\z: Int -> x + y + z)) 10 5
+;
+
+makeAdder :: Int -> (Int -> Int) -- works as expected
+makeAdder x = (\y: Int -> x + y)
+;
+
+twice :: (Int -> Int) -> Int -> Int -- works as expected
+twice f x = f (f x)
+;
+
+two :: (Int -> Int) -> Int -> Int -> Int -- works as expected
+two f x y = f x + f y
+;
+
+main :: Int
+main = two (\x : Int -> x * x - 10) 20 40
+;
+

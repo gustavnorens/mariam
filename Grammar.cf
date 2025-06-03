@@ -1,0 +1,48 @@
+token UIdent (upper (letter | digit | '_')*)                            ; 
+
+Program. Program ::= [Type_declaration] [Def]                           ;
+
+TDecl. Type_declaration ::= "data" UIdent "=" [Type_constructor]        ;
+terminator Type_declaration ""                                          ;
+
+TCntr. Type_constructor ::= UIdent [Type]                               ;
+separator Type_constructor "|"                                          ;
+
+TBuilt. Type1 ::= UIdent                                                ;
+TFun. Type ::= Type1 "->" Type                                          ;
+terminator Type ""                                                      ;
+coercions Type 1                                                        ;
+
+DDef.   Def     ::= Ident "::" Type Ident [Ident] "=" Exp               ;
+terminator Def ";"                                                      ;  
+terminator Ident ""                                                     ;
+
+EAtom. ConsExp    ::= UIdent                                            ;
+EConsExp. ConsExp ::= Exp5                                              ;
+
+EVar.   Exp5    ::= Ident                                               ;
+EInt.   Exp5    ::= Integer                                             ;
+EApp.   Exp4    ::= Exp4 ConsExp                                        ;
+ECons.  Exp3    ::= UIdent [ConsExp]                                    ;
+EMul.   Exp2    ::= Exp2 "*" Exp3                                       ;
+EDiv.   Exp2    ::= Exp2 "/" Exp3                                       ;
+EAdd.   Exp1    ::= Exp1 "+" Exp2                                       ;
+ESub.   Exp1    ::= Exp1 "-" Exp2                                       ;
+ELt.    Exp1    ::= Exp1 "<" Exp2                                       ;
+EIf.    Exp    ::= "if" Exp "then" Exp "else" Exp                       ;
+EMatch. Exp     ::= "case" Exp "of" "{" [Alt] "}"                       ;
+EAbs.   Exp     ::= "\\" Ident ":" Type1 "->" Exp                       ;
+
+coercions Exp 5                                                         ;
+separator ConsExp ""                                           ;
+
+layout "of"                                                             ;
+
+CAlt. Alt ::= Pattern "->" Exp                                          ;
+separator nonempty Alt ";"                                              ;
+                                                                        ;
+PCons. Pattern ::= UIdent [Ident]                                       ;
+terminator Pattern "";
+
+comment "--"                                                            ;
+comment "{-" "-}"                                                       ;
