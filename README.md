@@ -7,4 +7,3 @@
 - Add chars and subsequently strings
 - Implement a polymorphic type system
 - Generally implement other optimizations
-- Sometimes I just create random types for vars that I don't immediately have the type for <- fix thi

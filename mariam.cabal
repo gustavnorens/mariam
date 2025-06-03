@@ -80,7 +80,9 @@ executable mariam
 
     -- Other library packages from which modules are imported.
     build-depends:    
-        base ^>=4.17.2.1,
+        process,
+        directory,
+        base,
         array,
         containers,
         mtl

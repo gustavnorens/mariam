@@ -17,7 +17,7 @@ import Core (Type(..))
 import Prelude hiding (exp)
 
 type LiftProg = [LiftDef]
-type LiftDef = (String, Maybe String, TCore)
+type LiftDef = (String, Maybe (String, Type), TCore)
 type FreeMap = Map String (Set (String, Type))
 
 lift :: TProg -> (LiftProg, FreeMap)
@@ -31,9 +31,11 @@ lift prog = evalState go_all 1
 
     go_top :: (String, TCore) -> State Int ([LiftDef], FreeMap)
     go_top (name, body) = case body of 
-        TAbs v exp _ -> do
-            (body', defs, free') <- go (Map.singleton name (free_vars body))  exp 
-            return ((name, Just v, body') : defs, free')
+        TAbs v exp t -> case t of 
+            Fun t1 _ -> do
+                (body', defs, free') <- go (Map.singleton name (free_vars body))  exp 
+                return ((name, Just (v, t1), body') : defs, free')
+            _ -> error $ "Lifting: unexpected abstraction type: " ++ show t
         _ -> do
             (exp, defs, free) <- go (Map.singleton name (free_vars body)) body 
             return ((name, Nothing, exp): defs, free)
@@ -68,7 +70,9 @@ lift prog = evalState go_all 1
             fname <- lifted
             let vars = free_vars (TAbs v exp t)
             let free'' = Map.insert fname vars free'
-            return (TVar fname t, (fname, Just v, exp') : defs, free'')
+            case t of 
+                Fun t1 _ -> return (TVar fname t, (fname, Just (v, t1), exp') : defs, free'')
+                _ -> error $ "Lifting: unexpected abstraction type: " ++ show t
         where
             go_alt :: FreeMap -> TAlt -> State Int (TAlt, [LiftDef], FreeMap)
             go_alt free' (pat, exp) = do

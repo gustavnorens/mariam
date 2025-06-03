@@ -45,14 +45,14 @@ data Exp
     | AClosure String [Var]
     deriving Show
 
-anf :: FreeMap -> [(String, Maybe String, TCore)] -> [AFunction]
+anf :: FreeMap -> [(String, Maybe Var, TCore)] -> [AFunction]
 anf free defs = map (go_def free tops) defs
     where
         tops :: Set String
         tops = Set.fromList $ map (\(f,_,_) -> f) defs
 
-go_def :: FreeMap -> Set String -> (String, Maybe String, TCore) -> AFunction
-go_def free ss (name, arg, body) = AFunction name ((\s -> (s,Defined "Int")) <$> arg) body''
+go_def :: FreeMap -> Set String -> (String, Maybe Var, TCore) -> AFunction
+go_def free ss (name, arg, body) = AFunction name arg body''
     where
         body' :: Body
         body' = evalState (go_body body (return . Ret)) (Context 0 free ss)
