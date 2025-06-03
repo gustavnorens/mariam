@@ -25,7 +25,7 @@ data Context = Context
     {
         counter :: Int,
         free_map :: FreeMap,
-        top :: Set String
+        top_levels :: Set String
     } deriving Show
 
 data Body
@@ -39,6 +39,7 @@ data Exp
     | AATom (Integer, String)
     | ACons (Integer, String) [Var]
     | AArith ArithOp Var Var
+    | ACall Var
     | AApp Var Var
     | AProject Integer Var
     | AClosure String [Var]
@@ -46,7 +47,7 @@ data Exp
 
 anf :: FreeMap -> [(String, Maybe String, TCore)] -> [AFunction]
 anf free defs = map (go_def free tops) defs
-    where 
+    where
         tops :: Set String
         tops = Set.fromList $ map (\(f,_,_) -> f) defs
 
@@ -56,16 +57,16 @@ go_def free ss (name, arg, body) = AFunction name ((\s -> (s,Defined "Int")) <$>
         body' :: Body
         body' = evalState (go_body body (return . Ret)) (Context 0 free ss)
 
-        body'' :: Body 
-        body'' = case Map.lookup name free of 
+        body'' :: Body
+        body'' = case Map.lookup name free of
             Just vs -> foldr (\(i, v) b -> Let v (AProject i ("clos", Defined "clos")) b) body' (zip [1..] (Set.toList vs))
             Nothing -> error $ "Anf: function " ++ name ++ " not found in the free map"
 
 go_body :: TCore -> (Var -> State Context Body) -> State Context Body
 go_body exp k = case exp of
     TVar v t -> do
-        tops <- gets top 
-        if Set.member v tops 
+        tops <- gets top_levels
+        if Set.member v tops
             then do
                 var <- fresh t
                 b <- k (fst var, t)
@@ -73,7 +74,12 @@ go_body exp k = case exp of
                 case Map.lookup v m of
                     Just vs -> do
                         let vs' = Set.toList vs
-                        return $ Let var (AClosure v vs') b
+                        case t of 
+                            Fun {} -> return $ Let var (AClosure v vs') b
+                            _ -> do 
+                                clos_var <- fresh t
+                                return $ Let clos_var (AClosure v vs') (Let var (ACall clos_var) b)
+                        
                     Nothing -> error $ "Anf: variable " ++ v ++ " not found in the free map"
             else k (v, t)
     TInt n t -> do
@@ -125,6 +131,7 @@ pretty_exp = \case
     ACons (_, name) vs -> "constr " ++ show name ++ " [" ++ unwords (map (show . fst) vs) ++ "]"
     AArith op v1 v2 -> (show . fst) v1  ++ " " ++ show op ++ " " ++ (show . fst) v2
     AApp v1 v2 -> (show . fst) v1 ++ " " ++ (show . fst) v2
+    ACall v -> "call " ++ fst v
     AProject i v -> "project " ++ show i ++ (show . fst) v
     AClosure f vars -> "closure " ++ f ++ " [" ++ unwords (map (show . fst) vars) ++ "]"
 

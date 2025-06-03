@@ -8,6 +8,7 @@ import Control.Monad.State hiding (fix, lift)
 
 import Data.Map (Map)
 import qualified Data.Map as Map
+
 import qualified Data.Set as Set
 import Data.Set (Set)
 
