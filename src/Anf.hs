@@ -7,12 +7,11 @@ module Anf (anf, pretty, AFunction(..), Body(..), Exp(..)) where
 import Prelude hiding (exp)
 
 import Core(Type(..), ArithOp(..))
-import Typecheck (TCore(..), get_type)
+import Typecheck (TCore(..))
 import Lifting (FreeMap)
 
 import Control.Monad.State
 
-import Data.Map (Map)
 import qualified Data.Map as Map
 
 import Data.Set (Set)

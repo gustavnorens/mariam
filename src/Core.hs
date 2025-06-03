@@ -30,7 +30,7 @@ data Type
     = Integer
     | Defined String
     | Fun Type Type
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
 
 data Core
     = EInt Integer
@@ -53,7 +53,14 @@ data ArithOp
     | Times
     | Div
     | Less
-    deriving (Show, Eq)
+    deriving Eq
+
+instance Show ArithOp where
+    show Plus = "+"
+    show Minus = "-"
+    show Times = "*"
+    show Div = "/"
+    show Less = "<"
 
 translate :: Abs.Program -> CoreProg
 translate (Abs.Program types defs) = CoreProg {

@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Typecheck (typecheck, TProg, TCore(..), TAlt, TPattern) where
+module Typecheck (typecheck, TProg, TCore(..), TAlt, TPattern, get_type) where
 
 import Core
 
