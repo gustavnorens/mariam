@@ -80,12 +80,13 @@ emit funs = unlines
         "  Func2 f = ((Value *) clos)[3];",
         "  return f(clos, arg);",
         "}",
+        "",
         "Value call(Value clos) {",
         "  Func1 f = ((Value *) clos)[3];",
         "  return f(clos);",
         "}",
         ""
-    ] ++ join "\n" (map emit_decl funs) ++ "\n" ++ join "\n" (map emit_function funs) ++ "\n"
+    ] ++ join "\n" (map emit_decl funs) ++ "\n\n" ++ join "\n\n" (map emit_function funs) ++ "\n"
 
 emit_decl :: CFunction -> String
 emit_decl (CFunction name args _) =

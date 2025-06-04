@@ -4,8 +4,6 @@ module Main where
 import ParGrammar (pProgram, myLexer)
 import LayoutGrammar (resolveLayout)
 
-import qualified Data.Map as Map
-
 import Core(translate)
 import Typecheck(typecheck)
 import Alpha(alpha)
@@ -22,13 +20,16 @@ main :: IO ()
 main = do 
     args <- getArgs
     case args of 
-        [file] -> do 
+        ["--run", file] -> do 
             compile file
             wait1 <- runCommand $ "gcc build/" ++ remove_file_suffix file ++ ".c -Wno-int-conversion -o build/" ++ remove_file_suffix file ++ ".out"
             _ <- waitForProcess wait1
             wait2 <- runCommand $ "build/" ++ remove_file_suffix file ++ ".out"
             _ <- waitForProcess wait2
             removeDirectoryRecursive "build"
+            exitSuccess
+        ["--compile", file] -> do 
+            compile file
             exitSuccess
         _ -> putStrLn "Usage: mariam <filename>" >> exitSuccess
 
@@ -47,8 +48,6 @@ compile file = do
                 Right checked -> do
                     let (lifted, free) = lift checked
                     let anfProg = anf free lifted
-                    mapM (putStrLn . pretty) anfProg
-                    print free
                     let casted = cast anfProg
                     let cCode = emit casted
                     createDirectoryIfMissing False "build"

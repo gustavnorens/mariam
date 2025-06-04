@@ -70,15 +70,17 @@ translate (Abs.Program types defs) = CoreProg {
     core_types = get_types types}
 
 translate_def :: Abs.Def -> (String, Core)
-translate_def (Abs.DDef (Abs.Ident name) t _ args exp) = (name,  build_exp args (translate_type t) (translate_exp exp))
+translate_def (Abs.DDef (Abs.Ident name) t _ args exp) = (name,  build_exp args [1..] (translate_type t) (translate_exp exp))
     where
         ident :: Abs.Ident -> String
         ident (Abs.Ident v) = v
-
-        build_exp :: [Abs.Ident] -> Type -> Core -> Core
-        build_exp [] _ e = e
-        build_exp (s : ss) vt e = case vt of
-            Fun t1 t2 -> EAbs (ident s) t1 (build_exp ss t2 e)
+        
+        build_exp :: [Abs.Ident] -> [Integer] -> Type -> Core -> Core
+        build_exp [] nums ty e = case ty of 
+            Fun t1 t2 -> let arg = "arg" ++ show (head nums) in EAbs arg t1 (EApp (build_exp [] (tail nums) t2 e) (EVar arg))
+            _ -> e
+        build_exp (s : ss) nums vt e = case vt of
+            Fun t1 t2 -> EAbs (ident s) t1 (build_exp ss nums t2 e)
             _ -> error $ "type for function is not correct: " ++ show t
 
 translate_type :: Abs.Type -> Type
