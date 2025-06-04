@@ -7,7 +7,7 @@ module Anf (anf, pretty, AFunction(..), Body(..), Exp(..)) where
 import Prelude hiding (exp)
 
 import Core(Type(..), ArithOp(..))
-import Typecheck (TCore(..))
+import Typecheck (TCore(..), TAlt)
 import Lifting (FreeMap)
 
 import Control.Monad.State
@@ -31,7 +31,7 @@ data Context = Context
 data Body
     = Ret Var
     | Let Var Exp Body
-    | Case Var [Body]
+    | Case Var [(Integer, Body)]
     deriving Show
 
 data Exp
@@ -104,8 +104,15 @@ go_body exp k = case exp of
         b <- k v
         return $ Let v (AApp v1 v2) b
     TAbs {} -> error "Anf: abstractions should not be present in the input"
-    TIf {} -> error "Anf: 'if' not implemented yet"
-    TCase {} -> error "Anf: 'case' not implemented yet"
+    TCase e alts _ -> go_body e $ \v -> do
+        alts' <- mapM (go_alt v) alts
+        return $ Case v alts' 
+        where 
+            go_alt :: Var -> TAlt -> State Context (Integer, Body)
+            go_alt v ((i, _, vs), exp') = do
+                body <- go_body exp' k
+                return (i, foldl (\acc (field, var) -> Let var (AProject field v) acc) body (zip [0..] vs))
+        
 
 
 go_list :: [TCore] -> ([Var] -> State Context Body) -> State Context Body
@@ -122,8 +129,8 @@ pretty_body indent (Ret v) = replicate indent ' ' ++ "ret " ++ (show . fst) v ++
 pretty_body indent (Let v exp body) =
     replicate indent ' ' ++ "let " ++ (show . fst) v ++ " = " ++ pretty_exp exp ++ "\n" ++
     pretty_body indent body
-pretty_body _ _ = error "Anf: 'case' not implemented yet"
-
+pretty_body indent (Case v bodies) = replicate indent ' ' ++ "case " ++ (show . fst) v ++ " of\n" ++
+    concatMap (\(i, body) -> replicate (indent + 2) ' ' ++ show i ++ " ->\n" ++ pretty_body (indent + 4) body) bodies
 pretty_exp :: Exp -> String
 pretty_exp = \case
     AInt n -> show n
@@ -132,7 +139,7 @@ pretty_exp = \case
     AArith op v1 v2 -> (show . fst) v1  ++ " " ++ show op ++ " " ++ (show . fst) v2
     AApp v1 v2 -> (show . fst) v1 ++ " " ++ (show . fst) v2
     ACall v -> "call " ++ fst v
-    AProject i v -> "project " ++ show i ++ (show . fst) v
+    AProject i v -> "project " ++ show i ++ " " ++ (show . fst) v
     AClosure f vars -> "closure " ++ f ++ " [" ++ unwords (map (show . fst) vars) ++ "]"
 
 fresh :: Type -> State Context Var

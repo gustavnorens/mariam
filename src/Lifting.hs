@@ -56,11 +56,6 @@ lift prog = evalState go_all 1
             (e1', defs1, free1) <- go free e1
             (e2', defs2, free2) <- go free e2
             return (TApp e1' e2' t, defs1 ++ defs2, free1 <> free2)
-        TIf cond e1 e2 t  -> do
-            (cond',  dsc, freec)  <- go free cond
-            (e1', ds1, free1)  <- go free e1
-            (e2', ds2, free2)  <- go free e2
-            return (TIf cond' e1' e2' t, dsc ++ ds1 ++ ds2, freec <> free1 <> free2)
         TCase exp alts t -> do
             (exp',  defs, freem) <- go free exp
             (alts', defss, free') <- unzip3 <$> mapM (go_alt free) alts
@@ -96,7 +91,9 @@ free_vars = go mempty
             TArith _ e1 e2 _ -> go bound e1 <> go bound e2
             TCons _ exps _ -> mconcat $ map (go bound) exps
             TApp e1 e2 _ -> go bound e1 <> go bound e2
-            TIf {} -> error "'if' not implemented yet"
-            TCase {} -> error "'case' not implemented yet"
+            TCase e alts _ -> go bound e <> mconcat (map (go_alt bound) alts)
+                where
+                    go_alt :: Set (String, Type) -> TAlt -> Set (String, Type)
+                    go_alt bound' ((_, _, vs), exp) = go (foldr Set.insert bound' vs) exp
             TAbs v exp (Fun t1 _) -> go (Set.insert (v, t1) bound) exp
             TAbs _ _ t -> error $ "Unexpected abstraction type: " ++ show t

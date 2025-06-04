@@ -1,0 +1,69 @@
+data Bool = False | True
+data List = Nil | Cons Int List
+
+fact :: Int -> Int
+fact x = if x < 2 then 1 else x * fact (x - 1)
+;
+
+fib :: Int -> Int 
+fib n = if n < 2 then 1 else fib (n-1) + fib (n-2)
+;
+
+build :: Int -> List
+build n = case n < 1 of 
+    True -> Nil
+    False -> Cons n (build (n - 1))
+;
+
+surrender :: Int -> Int -> Int
+surrender a b = if (a + b) < 10 then 0 else 1
+;
+
+test :: Int
+test = (\x : Int -> x + x) 2
+;
+
+not :: Bool -> Bool
+not b = if b then True else False
+;
+
+rev :: List -> List
+rev xs = rev_helper xs Nil
+;
+
+rev_helper :: List -> List -> List
+rev_helper xs acc = case xs of 
+    Nil -> acc
+    Cons x xx -> rev_helper xx (Cons x acc)
+;
+
+square :: Int -> Int
+square x = x * x
+;
+
+foldr :: (Int -> Int -> Int) -> Int -> List -> Int
+foldr f acc xs = case xs of 
+    Nil -> acc
+    Cons x xx -> foldr f (f x acc) xx
+;
+
+map :: (Int -> Int) -> List -> List
+map f xs = case xs of 
+    Nil -> Nil
+    Cons x xx -> Cons (f x) (map f xx)
+;
+
+sum :: List -> Int
+sum xs = case xs of 
+    Nil -> 0
+    Cons x xx -> x + sum xx
+;
+
+mul :: Int -> Int -> Int
+mul a b = a * b
+;
+
+main :: Int 
+main = fact 20
+;
+

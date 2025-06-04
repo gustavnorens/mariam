@@ -17,7 +17,7 @@ data CFunction = CFunction
 data Cast
     = CInt Var Integer
     | CArith ArithOp Var Var Var
-    | CSwitch Var [[Cast]]
+    | CSwitch Var [(Integer, [Cast])]
     | CCall Var Var (Maybe Var)
     | CReturn Var
     | CPrint Var
@@ -30,40 +30,40 @@ cast :: [AFunction] -> [CFunction]
 cast = map cast_function
 
 cast_function :: AFunction -> CFunction
-cast_function (AFunction name arg body) = case name of 
-    "main" -> CFunction name [] (castBody name body)
-    _ -> case arg of 
-        Nothing -> CFunction name ["clos"] (castBody name body)
-        Just (v, _) -> CFunction name ["clos", v] (castBody name body)
+cast_function (AFunction name arg body) = case name of
+    "main" -> CFunction name [] (cast_body name body)
+    _ -> case arg of
+        Nothing -> CFunction name ["clos"] (cast_body name body)
+        Just (v, _) -> CFunction name ["clos", v] (cast_body name body)
 
-castBody :: String -> Body -> [Cast]
-castBody name = \case
-    Ret v -> case name of 
+cast_body :: String -> Body -> [Cast]
+cast_body name = \case
+    Ret v -> case name of
         "main" -> [CPrint (fst v)]
         _ -> [CReturn (fst v)]
     Let (v, _) exp body -> case exp of
-        AInt i -> CInt v i : castBody name body
-        AATom a -> CInt v (fst a) : castBody name body
+        AInt i -> CInt v i : cast_body name body
+        AATom a -> CInt v (fst a) : cast_body name body
         ACons (tag, _) vs ->
             [
                 CMalloc v (3 + toInteger (length vs)),
                 CInject v 0 (show (tag * 2 + 1)),
                 CInject v 1 (show (length vs)),
                 CInject v 2 "1"
-            ] ++ zipWith (CInject v) [3..] (map fst  vs) ++ castBody name body
-        AArith op (v1, _) (v2, _) -> CArith op v v1 v2 : castBody name body
-        AApp (v1, _) (v2, _) -> CCall v v1 (Just v2) : castBody name body
-        ACall (v1, _) -> CCall v v1 Nothing : castBody name body
-        AProject i (r, _) -> CProject v i r : castBody name body
-        AClosure fname vs -> 
+            ] ++ zipWith (CInject v) [3..] (map fst  vs) ++ cast_body name body
+        AArith op (v1, _) (v2, _) -> CArith op v v1 v2 : cast_body name body
+        AApp (v1, _) (v2, _) -> CCall v v1 (Just v2) : cast_body name body
+        ACall (v1, _) -> CCall v v1 Nothing : cast_body name body
+        AProject i (r, _) -> CProject v i r : cast_body name body
+        AClosure fname vs ->
             [
                 CMalloc v (4 + toInteger (length vs)),
                 CInject v 0 "NULL",
                 CInject v 1 (show (length vs)),
                 CInject v 2 "1",
                 CInject v 3 ("&" ++ fname)
-            ] ++ zipWith (CInject v) [4..] (map fst vs) ++ castBody name body
-    Case _ _ -> error "Case not supported in cast"
+            ] ++ zipWith (CInject v) [4..] (map fst vs) ++ cast_body name body
+    Case v bs -> [CSwitch (fst v) (map (\(i, body) -> (i, cast_body name body)) bs)]
 
 
 emit :: [CFunction] -> String
@@ -105,8 +105,7 @@ emit_cast indent = \case
         Minus -> "Value " ++ v1 ++ " = " ++ v2 ++ " - " ++ v3 ++ " | 1 " ++ ";"
         Times -> "Value " ++ v1 ++ " = ((" ++ v2 ++ " - 1) * (" ++ v3 ++ " >> 1) | 1);"
         Div -> "Value " ++ v1 ++ " = (" ++ v2 ++ "/" ++ "(" ++ v3 ++ " - 1)) << 1 | 1;"
-        Less -> "Value " ++ v1 ++ " = " ++ v2 ++ " < " ++ v3 ++ ";"
-    CSwitch _ _ -> undefined
+        Less -> "Value " ++ v1 ++ " = (" ++ v2 ++ " < " ++ v3 ++ ") << 1 | 1;"
     CCall v clos (Just arg) -> dent "Value " ++ v ++ " = apply(" ++ clos ++ ", " ++ arg ++ ");"
     CCall v clos Nothing -> dent "Value " ++ v ++ " = call(" ++ clos ++ ");"
     CReturn v -> dent "return " ++ v ++ ";"
@@ -114,9 +113,32 @@ emit_cast indent = \case
     CProject v i r -> dent "Value " ++ v ++ " = ((Value*) " ++ r ++ ")[" ++ show (i + 3) ++ "];"
     CInject r i v -> dent "((Value*) " ++ r ++ ")[" ++ show i ++ "] = " ++ v ++ ";"
     CMalloc v size -> dent "Value " ++ v ++ " = (Value) malloc(" ++ show size ++ " *" ++ " sizeof(Value));"
+    CSwitch v bodies -> 
+        dent "Value tag = ((" 
+            ++ v 
+            ++ " & 1) ? " 
+            ++ v 
+            ++ " : ((Value*) "
+            ++ v 
+            ++ ")[0]);\n" 
+            ++ dent "switch (tag) {\n"
+            ++ join "\n" (map (emit_case (indent + 2)) bodies)
+            ++ "\n"
+            ++ dent "}"
+-- Value tag = (v & 1) ? v : ((Value*) v)[0];
     where
         dent :: String -> String
         dent = (++) (replicate indent ' ')
+
+        emit_case :: Indent -> (Integer, [Cast]) -> String
+        emit_case indent' (i, ss) = replicate indent' ' ' 
+            ++ "case " 
+            ++ show (i * 2 + 1)
+            ++ ":\n"
+            ++ join "\n" (map (emit_cast (indent' + 2)) ss)
+            ++ "\n"
+            ++ replicate (indent' + 2) ' '
+            ++ "break;"
 
 join :: [a] -> [[a]] -> [a]
 join sep = foldr (\acc ss -> acc ++ if null ss then ss else sep ++ ss) []

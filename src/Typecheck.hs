@@ -23,7 +23,6 @@ data TCore
     | TArith ArithOp TCore TCore Type
     | TCons (Integer, String) [TCore] Type
     | TApp TCore TCore Type
-    | TIf TCore TCore TCore Type
     | TAbs Var TCore Type
     | TCase TCore [TAlt] Type
     deriving Show
@@ -31,7 +30,7 @@ data TCore
 type TProg = [(String, TCore)]
 
 type TAlt = (TPattern, TCore)
-type TPattern = (Integer, String, [Var])
+type TPattern = (Integer, String, [(Var, Type)])
 
 get_type :: TCore -> Type
 get_type = \case
@@ -42,7 +41,6 @@ get_type = \case
     TArith _ _ _ t -> t
     TApp _ _ t -> t
     TAbs _ _ t -> t
-    TIf _ _ _ t -> t
     TCase _ _ t -> t
 
 
@@ -100,12 +98,15 @@ infer ctx = \case
         cond' <- check ctx (Defined "Bool") cond
         e1' <- infer ctx e1
         e2' <- check ctx (get_type e1') e2
-        return $ TIf cond' e1' e2' (get_type e1')
+        return $ TCase cond'  [((0, "False", []), e2'), ((1, "True", []), e1')] (get_type e1')
     ECons cons_name exps -> let types = Map.lookup cons_name (cons_map ctx) in
         case types of
-            Just (t, ts, tag) -> do
-                exps' <- zipWithM (check ctx) ts exps
-                return $ TCons (tag, cons_name) exps' t
+            Just (t, ts, tag) -> 
+                if length exps /= length ts
+                    then Left $ "number of expressions does not match the constructor: " ++ cons_name
+                else do
+                    exps' <- zipWithM (check ctx) ts exps
+                    return $ TCons (tag, cons_name) exps' t
             Nothing -> Left $ "no such constructor in the current scope: " ++ cons_name
     ECase exp alts -> do
         exp' <- infer ctx exp
@@ -125,8 +126,9 @@ infer_alt ctx match_t ((name, binders), exp) = do
                     if length binders /= length ts
                         then Left $ "number of binders does not match the constructor: " ++ name
                     else do
-                        let ctx' = ctx {vars = foldr (\(v, t) acc -> Map.insert v t acc) (vars ctx) (zip binders ts)}
+                        let binders' = zip binders ts
+                        let ctx' = ctx {vars = foldr (\(v, t) acc -> Map.insert v t acc) (vars ctx) binders'}
                         exp' <- infer ctx' exp
-                        return ((tag, name, binders), exp')
+                        return ((tag, name, binders'), exp')
                 else Left $ "expected type: " ++ show match_t ++ ", got: " ++ show cons_t
         Nothing -> Left $ "no such constructor in the current scope: " ++ name

@@ -31,6 +31,8 @@ main = do
             removeDirectoryRecursive "build"
             exitSuccess
         _ -> putStrLn "Usage: mariam <filename>" >> exitSuccess
+
+
 compile :: String -> IO ()
 compile file = do
     content <- readFile file
@@ -45,6 +47,8 @@ compile file = do
                 Right checked -> do
                     let (lifted, free) = lift checked
                     let anfProg = anf free lifted
+                    mapM (putStrLn . pretty) anfProg
+                    print free
                     let casted = cast anfProg
                     let cCode = emit casted
                     createDirectoryIfMissing False "build"
