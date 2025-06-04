@@ -6,7 +6,7 @@ module Anf (anf, pretty, AFunction(..), Body(..), Exp(..)) where
 
 import Prelude hiding (exp)
 
-import Core(Type(..), ArithOp(..))
+import Core(Type(..), BinOp(..))
 import Typecheck (TCore(..), TAlt)
 import Lifting (FreeMap)
 
@@ -38,7 +38,7 @@ data Exp
     = AInt Integer
     | AATom (Integer, String)
     | ACons (Integer, String) [Var]
-    | AArith ArithOp Var Var
+    | ABinOp BinOp Var Var
     | ACall Var
     | AApp Var Var
     | AProject Integer Var
@@ -90,11 +90,11 @@ go_body exp k = case exp of
         v <- fresh t
         b <- k v
         return $ Let v (AATom a) b
-    TArith op e1 e2 t -> do
+    TBinOp op e1 e2 t -> do
         go_body e1 $ \v1 -> go_body e2 $ \v2 -> do
             v <- fresh t
             b <- k v
-            return $ Let v (AArith op v1 v2) b
+            return $ Let v (ABinOp op v1 v2) b
     TCons header exps t -> go_list exps $ \vs -> do
         v <- fresh t
         b <- k v
@@ -136,7 +136,7 @@ pretty_exp = \case
     AInt n -> show n
     AATom (_, name) -> name
     ACons (_, name) vs -> "constr " ++ show name ++ " [" ++ unwords (map (show . fst) vs) ++ "]"
-    AArith op v1 v2 -> (show . fst) v1  ++ " " ++ show op ++ " " ++ (show . fst) v2
+    ABinOp op v1 v2 -> (show . fst) v1  ++ " " ++ show op ++ " " ++ (show . fst) v2
     AApp v1 v2 -> (show . fst) v1 ++ " " ++ (show . fst) v2
     ACall v -> "call " ++ fst v
     AProject i v -> "project " ++ show i ++ " " ++ (show . fst) v

@@ -29,10 +29,10 @@ go ctx = \case
         Just v' -> return (EVar v')
         Nothing -> return (EVar v)
     EAtom v -> return (EAtom v)
-    EArith op e1 e2 -> do
+    EBinOp op e1 e2 -> do
         e1' <- go ctx e1
         e2' <- go ctx e2
-        return $ EArith op e1' e2'
+        return $ EBinOp op e1' e2'
     ECons name args -> do
         args' <- mapM (go ctx) args
         return $ ECons name args'

@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 module Cast (cast, emit) where
 
-import Core(Var, ArithOp(..))
+import Core(Var, BinOp(..))
 import Anf (AFunction(..), Body(..), Exp(..))
 import Prelude hiding (exp)
 
@@ -16,7 +16,7 @@ data CFunction = CFunction
 
 data Cast
     = CInt Var Integer
-    | CArith ArithOp Var Var Var
+    | CArith BinOp Var Var Var
     | CSwitch Var [(Integer, [Cast])]
     | CCall Var Var (Maybe Var)
     | CReturn Var
@@ -51,7 +51,7 @@ cast_body name = \case
                 CInject v 1 (show (length vs)),
                 CInject v 2 "1"
             ] ++ zipWith (CInject v) [3..] (map fst  vs) ++ cast_body name body
-        AArith op (v1, _) (v2, _) -> CArith op v v1 v2 : cast_body name body
+        ABinOp op (v1, _) (v2, _) -> CArith op v v1 v2 : cast_body name body
         AApp (v1, _) (v2, _) -> CCall v v1 (Just v2) : cast_body name body
         ACall (v1, _) -> CCall v v1 Nothing : cast_body name body
         AProject i (r, _) -> CProject v i r : cast_body name body
@@ -106,7 +106,7 @@ emit_cast indent = \case
         Minus -> "Value " ++ v1 ++ " = " ++ v2 ++ " - " ++ v3 ++ " | 1 " ++ ";"
         Times -> "Value " ++ v1 ++ " = ((" ++ v2 ++ " - 1) * (" ++ v3 ++ " >> 1) | 1);"
         Div -> "Value " ++ v1 ++ " = (" ++ v2 ++ "/" ++ "(" ++ v3 ++ " - 1)) << 1 | 1;"
-        Less -> "Value " ++ v1 ++ " = (" ++ v2 ++ " < " ++ v3 ++ ") << 1 | 1;"
+        _ -> "Value " ++ v1 ++ " = (" ++ v2 ++ " " ++ show op ++ " " ++ v3 ++ ") << 1 | 1;"
     CCall v clos (Just arg) -> dent "Value " ++ v ++ " = apply(" ++ clos ++ ", " ++ arg ++ ");"
     CCall v clos Nothing -> dent "Value " ++ v ++ " = call(" ++ clos ++ ");"
     CReturn v -> dent "return " ++ v ++ ";"
@@ -115,18 +115,17 @@ emit_cast indent = \case
     CInject r i v -> dent "((Value*) " ++ r ++ ")[" ++ show i ++ "] = " ++ v ++ ";"
     CMalloc v size -> dent "Value " ++ v ++ " = (Value) malloc(" ++ show size ++ " *" ++ " sizeof(Value));"
     CSwitch v bodies -> 
-        dent "Value tag = ((" 
+        dent "Value tag_" ++ v ++ " = ((" 
             ++ v 
             ++ " & 1) ? " 
             ++ v 
             ++ " : ((Value*) "
             ++ v 
             ++ ")[0]);\n" 
-            ++ dent "switch (tag) {\n"
+            ++ dent "switch (tag_" ++ v ++ ") {\n"
             ++ join "\n" (map (emit_case (indent + 2)) bodies)
             ++ "\n"
             ++ dent "}"
--- Value tag = (v & 1) ? v : ((Value*) v)[0];
     where
         dent :: String -> String
         dent = (++) (replicate indent ' ')

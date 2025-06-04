@@ -1,4 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use infix" #-}
 module Typecheck (typecheck, TProg, TCore(..), TAlt, TPattern, get_type) where
 
 import Core
@@ -20,7 +22,7 @@ data TCore
     = TInt Integer Type
     | TVar Var Type
     | TAtom (Integer, String) Type
-    | TArith ArithOp TCore TCore Type
+    | TBinOp BinOp TCore TCore Type
     | TCons (Integer, String) [TCore] Type
     | TApp TCore TCore Type
     | TAbs Var TCore Type
@@ -38,7 +40,7 @@ get_type = \case
     TAtom _ t -> t
     TInt _ t -> t
     TCons _ _ t -> t
-    TArith _ _ _ t -> t
+    TBinOp _ _ _ t -> t
     TApp _ _ t -> t
     TAbs _ _ t -> t
     TCase _ _ t -> t
@@ -73,16 +75,15 @@ infer ctx = \case
     EAtom name -> case Map.lookup name (cons_map ctx) of
         Just (t, _, tag) -> return $ TAtom (tag, name) t
         Nothing -> Left $ "no such atom in the current scope: " ++ name
-    EArith op x y -> do
-        case op of
-            Less -> do
-                x' <- check ctx (Defined "Int") x
-                y' <- check ctx (Defined "Int") y
-                return $ TArith op x' y' (Defined "Bool")
-            _ -> do
-                x' <- check ctx (Defined "Int") x
-                y' <- check ctx (Defined "Int") y
-                return $ TArith op x' y' (Defined "Int")
+    EBinOp op x y -> if elem op [Plus, Times, Div, Minus] 
+        then do
+            x' <- check ctx (Defined "Int") x
+            y' <- check ctx (Defined "Int") y
+            return $ TBinOp op x' y' (Defined "Int") 
+        else do
+            x' <- check ctx (Defined "Int") x
+            y' <- check ctx (Defined "Int") y
+            return $ TBinOp op x' y' (Defined "Bool")
     EApp f x -> do
         tf <- infer ctx f
         case get_type tf of
@@ -101,7 +102,7 @@ infer ctx = \case
         return $ TCase cond'  [((0, "False", []), e2'), ((1, "True", []), e1')] (get_type e1')
     ECons cons_name exps -> let types = Map.lookup cons_name (cons_map ctx) in
         case types of
-            Just (t, ts, tag) -> 
+            Just (t, ts, tag) ->
                 if length exps /= length ts
                     then Left $ "number of expressions does not match the constructor: " ++ cons_name
                 else do

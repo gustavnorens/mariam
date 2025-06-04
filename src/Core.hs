@@ -3,7 +3,7 @@
 module Core (
     Core(..),
     CoreProg(..),
-    ArithOp(..),
+    BinOp(..),
     Type(..),
     Var,
     translate,
@@ -36,7 +36,7 @@ data Core
     = EInt Integer
     | EVar Var
     | EAtom String
-    | EArith ArithOp Core Core
+    | EBinOp BinOp Core Core
     | ECons String [Core]
     | EApp Core Core
     | EIf Core Core Core
@@ -47,20 +47,30 @@ data Core
 type EAlt = (EPattern, Core)
 type EPattern = (String, [Var])
 
-data ArithOp
+data BinOp
     = Plus
     | Minus
     | Times
     | Div
     | Less
+    | Greater
+    | EQLess
+    | EQGreater
+    | Equal
+    | Nequal
     deriving Eq
 
-instance Show ArithOp where
+instance Show BinOp where
     show Plus = "+"
     show Minus = "-"
     show Times = "*"
     show Div = "/"
     show Less = "<"
+    show Greater = ">"
+    show EQLess = "<="
+    show EQGreater = ">="
+    show Equal = "=="
+    show Nequal = "!="
 
 translate :: Abs.Program -> CoreProg
 translate (Abs.Program types defs) = CoreProg {
@@ -92,11 +102,16 @@ translate_exp :: Abs.Exp -> Core
 translate_exp = \case
     Abs.EInt i -> EInt i
     Abs.EVar (Abs.Ident v) -> EVar v
-    Abs.EAdd e1 e2 -> EArith Plus (translate_exp e1) (translate_exp e2)
-    Abs.EMul e1 e2 -> EArith Times (translate_exp e1) (translate_exp e2)
-    Abs.EDiv e1 e2 -> EArith Div (translate_exp e1) (translate_exp e2)
-    Abs.ESub e1 e2 -> EArith Minus (translate_exp e1) (translate_exp e2)
-    Abs.ELt e1 e2 -> EArith Less (translate_exp e1) (translate_exp e2)
+    Abs.EAdd e1 e2 -> EBinOp Plus (translate_exp e1) (translate_exp e2)
+    Abs.EMul e1 e2 -> EBinOp Times (translate_exp e1) (translate_exp e2)
+    Abs.EDiv e1 e2 -> EBinOp Div (translate_exp e1) (translate_exp e2)
+    Abs.ESub e1 e2 -> EBinOp Minus (translate_exp e1) (translate_exp e2)
+    Abs.ELt e1 e2 -> EBinOp Less (translate_exp e1) (translate_exp e2)
+    Abs.EGt e1 e2 -> EBinOp Greater (translate_exp e1) (translate_exp e2)
+    Abs.EQLt e1 e2 -> EBinOp EQLess (translate_exp e1) (translate_exp e2)
+    Abs.EQGt e1 e2 -> EBinOp EQGreater (translate_exp e1) (translate_exp e2)
+    Abs.Eq e1 e2 -> EBinOp Equal (translate_exp e1) (translate_exp e2)
+    Abs.Neq e1 e2 -> EBinOp Nequal (translate_exp e1) (translate_exp e2)
     Abs.EApp e1 e2 -> EApp (translate_exp e1) (translate_cons_exp e2)
     Abs.EAbs (Abs.Ident v) t e -> EAbs v (translate_type t) (translate_exp e)
     Abs.EIf e1 e2 e3 -> EIf (translate_exp e1) (translate_exp e2) (translate_exp e3)

@@ -18,22 +18,27 @@ terminator Def ";"                                                      ;
 terminator Ident ""                                                     ;
 
 EAtom. ConsExp    ::= UIdent                                            ;
-EConsExp. ConsExp ::= Exp5                                              ;
+EConsExp. ConsExp ::= Exp6                                              ;
 
-EVar.   Exp5    ::= Ident                                               ;
-EInt.   Exp5    ::= Integer                                             ;
-EApp.   Exp4    ::= Exp4 ConsExp                                        ;
-ECons.  Exp3    ::= UIdent [ConsExp]                                    ;
-EMul.   Exp2    ::= Exp2 "*" Exp3                                       ;
-EDiv.   Exp2    ::= Exp2 "/" Exp3                                       ;
-EAdd.   Exp1    ::= Exp1 "+" Exp2                                       ;
-ESub.   Exp1    ::= Exp1 "-" Exp2                                       ;
+EVar.   Exp6    ::= Ident                                               ;
+EInt.   Exp6    ::= Integer                                             ;
+EApp.   Exp5    ::= Exp5 ConsExp                                        ;
+ECons.  Exp4    ::= UIdent [ConsExp]                                    ;
+EMul.   Exp3    ::= Exp3 "*" Exp4                                       ;
+EDiv.   Exp3    ::= Exp3 "/" Exp4                                       ;
+EAdd.   Exp2    ::= Exp2 "+" Exp3                                       ;
+ESub.   Exp2    ::= Exp2 "-" Exp3                                       ;
 ELt.    Exp1    ::= Exp1 "<" Exp2                                       ;
+EGt.    Exp1    ::= Exp1 ">" Exp2                                       ;
+EQLt.   Exp1    ::= Exp1 "<=" Exp2                                      ;
+EQGt.   Exp1    ::= Exp1 ">=" Exp2                                      ;
+Neq.    Exp1    ::= Exp1 "!=" Exp2                                      ;
+Eq.     Exp1    ::= Exp1 "==" Exp2                                      ;
 EIf.    Exp    ::= "if" Exp "then" Exp "else" Exp                       ;
 EMatch. Exp     ::= "case" Exp "of" "{" [Alt] "}"                       ;
 EAbs.   Exp     ::= "\\" Ident ":" Type1 "->" Exp                       ;
 
-coercions Exp 5                                                         ;
+coercions Exp 6                                                         ;
 separator ConsExp ""                                           ;
 
 layout "of"                                                             ;

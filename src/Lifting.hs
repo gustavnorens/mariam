@@ -45,10 +45,10 @@ lift prog = evalState go_all 1
         TInt n t -> return (TInt n t, [], free)
         TVar v t -> return (TVar v t, [], free)
         TAtom a t -> return (TAtom a t, [], free)
-        TArith op e1 e2 t -> do
+        TBinOp op e1 e2 t -> do
             (e1', ds1, free1) <- go free e1
             (e2', ds2, free2) <- go free e2
-            return (TArith op e1' e2' t, ds1 ++ ds2, free1 <> free2)
+            return (TBinOp op e1' e2' t, ds1 ++ ds2, free1 <> free2)
         TCons header exps t -> do
             (exps', defs, free') <- unzip3 <$> mapM (go free) exps
             return (TCons header exps' t, concat defs, mconcat free')
@@ -88,7 +88,7 @@ free_vars = go mempty
             TInt {} -> mempty
             TVar v t -> if Set.member (v, t) bound || head v /= 'v' then mempty else Set.singleton (v, t)
             TAtom {} -> mempty
-            TArith _ e1 e2 _ -> go bound e1 <> go bound e2
+            TBinOp _ e1 e2 _ -> go bound e1 <> go bound e2
             TCons _ exps _ -> mconcat $ map (go bound) exps
             TApp e1 e2 _ -> go bound e1 <> go bound e2
             TCase e alts _ -> go bound e <> mconcat (map (go_alt bound) alts)
