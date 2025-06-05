@@ -14,6 +14,7 @@ import System.Environment (getArgs)
 import System.Exit (exitSuccess)
 import System.Directory (createDirectoryIfMissing, removeDirectoryRecursive)
 import System.Process (runCommand, waitForProcess)
+import RefCount (rc)
 
 
 main :: IO ()
@@ -48,7 +49,8 @@ compile file = do
                 Right checked -> do
                     let (lifted, free) = lift checked
                     let anfProg = anf free lifted
-                    let casted = cast anfProg
+                    let scoped = rc anfProg
+                    let casted = cast scoped
                     let cCode = emit casted
                     createDirectoryIfMissing False "build"
                     writeFile ("build/" ++ remove_file_suffix file ++ ".c") cCode

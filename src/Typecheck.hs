@@ -71,18 +71,18 @@ infer ctx = \case
         Nothing -> case Map.lookup x (tl_defs ctx) of
             Just t -> return $ TVar x t
             Nothing -> Left $ "no such variable in the current scope: " ++ x
-    EInt v -> return $ TInt v (Defined "Int")
+    EInt v -> return $ TInt v Integer
     EAtom name -> case Map.lookup name (cons_map ctx) of
         Just (t, _, tag) -> return $ TAtom (tag, name) t
         Nothing -> Left $ "no such atom in the current scope: " ++ name
     EBinOp op x y -> if elem op [Plus, Times, Div, Minus] 
         then do
-            x' <- check ctx (Defined "Int") x
-            y' <- check ctx (Defined "Int") y
-            return $ TBinOp op x' y' (Defined "Int") 
+            x' <- check ctx Integer x
+            y' <- check ctx Integer y
+            return $ TBinOp op x' y' Integer 
         else do
-            x' <- check ctx (Defined "Int") x
-            y' <- check ctx (Defined "Int") y
+            x' <- check ctx Integer x
+            y' <- check ctx Integer y
             return $ TBinOp op x' y' (Defined "Bool")
     EApp f x -> do
         tf <- infer ctx f
@@ -107,7 +107,9 @@ infer ctx = \case
                     then Left $ "number of expressions does not match the constructor: " ++ cons_name
                 else do
                     exps' <- zipWithM (check ctx) ts exps
-                    return $ TCons (tag, cons_name) exps' t
+                    return $ if null exps 
+                        then TAtom (tag, cons_name) t
+                        else TCons (tag, cons_name) exps' t
             Nothing -> Left $ "no such constructor in the current scope: " ++ cons_name
     ECase exp alts -> do
         exp' <- infer ctx exp

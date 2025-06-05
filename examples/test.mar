@@ -50,6 +50,6 @@ add a b = a + b
 ;
 
 main :: Int 
-main = sum (map square (rev (build 10)))
+main = sum (map square (rev (build 20)))
 ;
 

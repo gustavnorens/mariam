@@ -24,6 +24,8 @@ data Cast
     | CProject Var Integer Var
     | CInject Var Integer Var
     | CMalloc Var Integer
+    | CDec Var
+    | CInc Var
     deriving Show
 
 cast :: [AFunction] -> [CFunction]
@@ -57,13 +59,15 @@ cast_body name = \case
         AProject i (r, _) -> CProject v i r : cast_body name body
         AClosure fname vs ->
             [
-                CMalloc v (4 + toInteger (length vs)),
-                CInject v 0 "NULL",
+                CMalloc v (3 + toInteger (length vs)),
+                CInject v 0 ("&" ++ fname),
                 CInject v 1 (show (length vs)),
-                CInject v 2 "1",
-                CInject v 3 ("&" ++ fname)
-            ] ++ zipWith (CInject v) [4..] (map fst vs) ++ cast_body name body
+                CInject v 2 "1"
+            ] ++ zipWith (CInject v) [3..] (map fst vs) ++ cast_body name body
     Case v bs -> [CSwitch (fst v) (map (\(i, body) -> (i, cast_body name body)) bs)]
+    Dec v body -> CDec (fst v) : cast_body name body
+    Inc v body -> CInc (fst v) : cast_body name body
+
 
 
 emit :: [CFunction] -> String
@@ -76,13 +80,32 @@ emit funs = unlines
         "typedef Value (*Func1)(Value);",
         "typedef Value (*Func2)(Value, Value);",
         "",
+        "Value memory = 0;",
+        "",
+        "void inc(Value ref) {",
+        "  if (1 & ref) return;",
+        "  ((Value*) ref)[2]++;",
+        "}",
+        "",
+        "void dec(Value ref) {",
+        "  if (1 & ref) return;",
+        "  if (((Value*) ref)[2] == 1) {",
+        "    for (int i = 3; i < ((Value*) ref)[1] + 3; i++) {",
+        "      dec(((Value*) ref)[i]);",
+        "    }",
+        "    memory -= (((Value*) ref)[1] + 3);",
+        "    free(ref);",
+        "  }",
+        "  else ((Value*) ref)[2]--;",
+        "}",
+        "",
         "Value apply(Value clos, Value arg) {",
-        "  Func2 f = ((Value *) clos)[3];",
+        "  Func2 f = ((Value*) clos)[0];",
         "  return f(clos, arg);",
         "}",
         "",
         "Value call(Value clos) {",
-        "  Func1 f = ((Value *) clos)[3];",
+        "  Func1 f = ((Value *) clos)[0];",
         "  return f(clos);",
         "}",
         ""
@@ -110,10 +133,14 @@ emit_cast indent = \case
     CCall v clos (Just arg) -> dent "Value " ++ v ++ " = apply(" ++ clos ++ ", " ++ arg ++ ");"
     CCall v clos Nothing -> dent "Value " ++ v ++ " = call(" ++ clos ++ ");"
     CReturn v -> dent "return " ++ v ++ ";"
-    CPrint v -> dent "printf(\"%lld\\n\", " ++ v ++ " >> 1);"
+    CPrint v -> dent "printf(\"%lld\\n\", " ++ v ++ " >> 1);\n"
+        ++ dent "printf(\"Memory active: %lld\\n\", memory);"
     CProject v i r -> dent "Value " ++ v ++ " = ((Value*) " ++ r ++ ")[" ++ show (i + 3) ++ "];"
     CInject r i v -> dent "((Value*) " ++ r ++ ")[" ++ show i ++ "] = " ++ v ++ ";"
-    CMalloc v size -> dent "Value " ++ v ++ " = (Value) malloc(" ++ show size ++ " *" ++ " sizeof(Value));"
+    CMalloc v size -> dent "Value " ++ v ++ " = (Value) malloc(" ++ show size ++ " *" ++ " sizeof(Value));\n" 
+        ++ dent "memory += " ++ show size ++ ";"
+    CDec v -> dent "dec(" ++ v ++ ");"
+    CInc v -> dent "inc(" ++ v ++ ");"
     CSwitch v bodies -> 
         dent "Value tag_" ++ v ++ " = ((" 
             ++ v 

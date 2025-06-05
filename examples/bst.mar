@@ -1,0 +1,62 @@
+data Tree = Empty | Node Int Tree Int Tree
+data List = Nil | Cons Int List
+data Bool = False | True
+
+skew :: Tree -> Tree
+skew tree = case tree of
+    Empty -> tree
+    Node h l v r -> case l of
+        Empty -> tree
+        Node lh ll lv lr -> if lh == h then Node h ll lv (Node lh lr v r) else tree
+;
+
+split :: Tree -> Tree
+split tree = case tree of
+    Empty -> tree
+    Node h l v r -> case r of
+        Empty -> tree
+        Node rh rl rv rr -> case rr of
+            Empty -> tree
+            Node rrh rrl rrv rrr -> if h == rrh then Node (rh + 1) (Node h l v rl) rv rr else tree
+;            
+
+balance :: Tree -> Tree
+balance tree = split (skew tree)
+;
+
+insert :: Int -> Tree -> Tree
+insert x tree = case tree of
+    Empty -> Node 1 Empty x Empty
+    Node h l v r -> if x < v 
+        then balance (Node h (insert x l) v r)
+        else if x > v 
+            then balance (Node h l v (insert x r))
+            else tree
+;
+
+sum :: Tree -> Int
+sum tree = case tree of
+    Empty -> 0
+    Node h l v r -> v + sum l + sum r
+;
+
+
+foldr :: (Int -> Tree -> Tree) -> Tree -> List -> Tree
+foldr f acc xs = case xs of 
+    Nil -> acc
+    Cons x xx -> foldr f (f x acc) xx
+;
+
+fromList :: List -> Tree
+fromList xs = foldr insert Empty xs
+;
+
+build :: Int -> List
+build n = case n == 0 of 
+    True -> Nil
+    False -> Cons n (build (n - 1))
+;
+
+main :: Int 
+main = sum (fromList (build 2500))
+;

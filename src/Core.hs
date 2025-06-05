@@ -96,7 +96,7 @@ translate_def (Abs.DDef (Abs.Ident name) t _ args exp) = (name,  build_exp args 
 translate_type :: Abs.Type -> Type
 translate_type = \case
     Abs.TFun t1 t2 -> Fun (translate_type t1) (translate_type t2)
-    Abs.TBuilt (Abs.UIdent s) -> Defined s
+    Abs.TBuilt (Abs.UIdent s) -> if s == "Int" then Integer else Defined s
 
 translate_exp :: Abs.Exp -> Core
 translate_exp = \case
@@ -122,6 +122,7 @@ translate_exp = \case
         translate_cons_exp = \case
             Abs.EAtom (Abs.UIdent s) -> EAtom s
             Abs.EConsExp e -> translate_exp e
+            
         translate_alt :: Abs.Alt -> EAlt
         translate_alt (Abs.CAlt  (Abs.PCons (Abs.UIdent s) args) exp) = ((s, map ident args), translate_exp exp)
             where
@@ -139,10 +140,10 @@ get_cons_map = foldr go Map.empty
         go (Abs.TDecl (Abs.UIdent type_name) constructors) m = foldr go' m (zip [0..] constructors)
             where
                 go' :: (Integer, Abs.Type_constructor) -> Map String (Type, [Type], Integer) -> Map String (Type, [Type], Integer)
-                go' (tag, Abs.TCntr (Abs.UIdent cons_name) types) = Map.insert cons_name (Defined type_name, map translate_type types, tag)
+                go' (tag, Abs.TCntr (Abs.UIdent cons_name) types) = Map.insert cons_name (if type_name == "Int" then Integer else Defined type_name, map translate_type types, tag)
 
 get_types :: [Abs.Type_declaration] -> [Type]
 get_types = foldr go [] 
     where 
         go :: Abs.Type_declaration -> [Type] -> [Type]
-        go (Abs.TDecl (Abs.UIdent type_name) _) acc = Defined type_name : acc
+        go (Abs.TDecl (Abs.UIdent type_name) _) acc = (if type_name == "Int" then Integer else Defined type_name) : acc

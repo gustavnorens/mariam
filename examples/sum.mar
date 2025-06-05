@@ -1,0 +1,33 @@
+data List = Nil | Cons Int List
+data Bool = False | True
+
+
+build :: Int -> List
+build n = case n == 0 of 
+    True -> Nil
+    False -> Cons n (build (n - 1))
+;
+
+sum :: List -> Int
+sum xs = case xs of 
+    Nil -> 0
+    Cons x xx -> x + sum xx
+;
+
+map :: (Int -> Int) -> List -> List
+map f xs = case xs of 
+    Nil -> Nil
+    Cons x xx -> Cons (f x) (map f xx)
+;
+
+square :: Int -> Int
+square x = x * x
+;
+
+add :: Int -> Int -> Int
+add x y = x + y
+;
+
+main :: Int
+main = sum (map (add 15) (build 250))
+;

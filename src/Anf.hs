@@ -32,6 +32,8 @@ data Body
     = Ret Var
     | Let Var Exp Body
     | Case Var [(Integer, Body)]
+    | Dec Var Body
+    | Inc Var Body
     deriving Show
 
 data Exp
@@ -59,7 +61,7 @@ go_def free ss (name, arg, body) = AFunction name arg body''
 
         body'' :: Body
         body'' = case Map.lookup name free of
-            Just vs -> foldr (\(i, v) b -> Let v (AProject i ("clos", Defined "clos")) b) body' (zip [1..] (Set.toList vs))
+            Just vs -> foldr (\(i, v) b -> Let v (AProject i ("clos", Defined "clos")) b) body' (zip [0..] (Set.toList vs))
             Nothing -> error $ "Anf: function " ++ name ++ " not found in the free map"
 
 go_body :: TCore -> (Var -> State Context Body) -> State Context Body
@@ -131,6 +133,7 @@ pretty_body indent (Let v exp body) =
     pretty_body indent body
 pretty_body indent (Case v bodies) = replicate indent ' ' ++ "case " ++ (show . fst) v ++ " of\n" ++
     concatMap (\(i, body) -> replicate (indent + 2) ' ' ++ show i ++ " ->\n" ++ pretty_body (indent + 4) body) bodies
+pretty_body _ b = error "Anf: unsupported body " ++ show b
 pretty_exp :: Exp -> String
 pretty_exp = \case
     AInt n -> show n
