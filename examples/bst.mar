@@ -34,10 +34,21 @@ insert x tree = case tree of
             else tree
 ;
 
-sum :: Tree -> Int
-sum tree = case tree of
-    Empty -> 0
-    Node h l v r -> v + sum l + sum r
+sum :: List -> Int
+sum xs = case xs of
+    Nil -> 0
+    Cons x xx -> x + sum xx
+;
+
+
+inorder :: Tree -> List
+inorder tree = inorder_helper tree Nil
+;
+
+inorder_helper :: Tree -> List -> List
+inorder_helper tree acc = case tree of
+    Empty -> acc
+    Node h l v r -> inorder_helper l (Cons v (inorder_helper r acc))
 ;
 
 
@@ -58,5 +69,5 @@ build n = case n == 0 of
 ;
 
 main :: Int 
-main = sum (fromList (build 2500))
+main = sum (inorder (fromList (build 5000)))
 ;

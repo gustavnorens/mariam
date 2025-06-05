@@ -8,7 +8,8 @@ import Core(translate)
 import Typecheck(typecheck)
 import Alpha(alpha)
 import Lifting(lift)
-import Anf(anf, pretty)
+import Anf(anf)
+import System.FilePath (takeBaseName)
 import Cast(cast, emit)
 import System.Environment (getArgs)
 import System.Exit (exitSuccess)
@@ -16,16 +17,15 @@ import System.Directory (createDirectoryIfMissing, removeDirectoryRecursive)
 import System.Process (runCommand, waitForProcess)
 import RefCount (rc)
 
-
 main :: IO ()
 main = do 
     args <- getArgs
     case args of 
         ["--run", file] -> do 
             compile file
-            wait1 <- runCommand $ "gcc build/" ++ remove_file_suffix file ++ ".c -Wno-int-conversion -o build/" ++ remove_file_suffix file ++ ".out"
+            wait1 <- runCommand $ "gcc build/" ++ takeBaseName file ++ ".c -Wno-int-conversion -o build/" ++ takeBaseName file ++ ".out"
             _ <- waitForProcess wait1
-            wait2 <- runCommand $ "build/" ++ remove_file_suffix file ++ ".out"
+            wait2 <- runCommand $ "build/" ++ takeBaseName file ++ ".out"
             _ <- waitForProcess wait2
             removeDirectoryRecursive "build"
             exitSuccess
@@ -53,9 +53,6 @@ compile file = do
                     let casted = cast scoped
                     let cCode = emit casted
                     createDirectoryIfMissing False "build"
-                    writeFile ("build/" ++ remove_file_suffix file ++ ".c") cCode
-
-remove_file_suffix :: String -> String
-remove_file_suffix s = take (length s - 4) s
+                    writeFile ("build/" ++ takeBaseName file ++ ".c") cCode
         
                 

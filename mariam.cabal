@@ -86,7 +86,8 @@ executable mariam
         base,
         array,
         containers,
-        mtl
+        mtl,
+        filepath
 
     -- Directories containing source files.
     hs-source-dirs:   src src/Ast
